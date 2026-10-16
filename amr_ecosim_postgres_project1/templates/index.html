@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMR-EcoSim | Health Informatics Simulation</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header><div class="brand"><div class="logo">AMR</div><div><h1>AMR-EcoSim</h1><p>Antibiotic & nutrient data explorer + simulation lab</p></div></div><span id="dbStatus" class="status">กำลังตรวจฐานข้อมูล…</span></header>
+<main>
+<div class="notice"><b>ข้อจำกัดของโมเดล:</b> Simulation นี้เป็นแบบจำลองเชิงการศึกษา ใช้สมมติฐานที่กำหนดไว้ในโค้ด ไม่ใช่การพยากรณ์ทางคลินิก และไม่ใช่หลักฐานว่าเชื้อจริงจะวิวัฒนาการตามผลลัพธ์นี้ ค่าในตัวควบคุมเป็นสเกลจำลอง 0–1 ไม่ใช่หน่วยความเข้มข้นทางคลินิก</div>
+<nav class="tabs">
+<button class="tab active" data-page="overview">ภาพรวมข้อมูล</button>
+<button class="tab" data-page="explore">สำรวจข้อมูล CSV</button>
+<button class="tab" data-page="simulation">Simulation Lab</button>
+<button class="tab" data-page="data">ข้อมูลและ SQL</button>
+</nav>
+<section class="page active" id="overview">
+<div class="metrics">
+<div class="card"><label>จำนวนแถว</label><strong id="rowCount">—</strong><small>ข้อมูลใน PostgreSQL</small></div>
+<div class="card"><label>ค่าเฉลี่ย surv_frac</label><strong id="overallMean">—</strong><small>ทุกเงื่อนไขรวมกัน</small></div>
+<div class="card"><label>จำนวนระดับยา</label><strong id="doseLevels">—</strong><small>ค่า AB_conc ที่ไม่ซ้ำ</small></div>
+<div class="card"><label>ช่วงเวลา</label><strong id="timeRange">—</strong><small>ค่าต่ำสุด–สูงสุด</small></div>
+</div>
+<div class="two"><div class="panel"><h2>ค่าเฉลี่ย surv_frac ตามระดับยา</h2><p class="muted">รวมทุกระดับสารอาหารและเวลา โปรดตีความเป็นภาพรวมเท่านั้น</p><div id="doseChart" class="chart"></div></div><div class="panel"><h2>วิธีอ่าน Dashboard</h2><p>ข้อมูลส่วนนี้มาจาก CSV ที่เก็บใน PostgreSQL ส่วนผลใน Simulation Lab คำนวณจากสมมติฐานของโมเดลแยกต่างหาก</p><ul><li><code>AB_conc</code> — ความเข้มข้นยาตามไฟล์ต้นทาง</li><li><code>nutrient_conc</code> — ความเข้มข้นสารอาหารตามไฟล์</li><li><code>surv_frac</code> — ตัวแปรผลลัพธ์ตามไฟล์ ต้องตรวจนิยามจากแหล่งข้อมูล</li></ul></div></div>
+</section>
+<section class="page" id="explore">
+<div class="panel"><h2>สำรวจข้อมูลจาก CSV</h2><p class="muted">ตัวเลือกและสถิติดึงจาก PostgreSQL โดยตรง</p><div class="controls"><div><label for="dose">AB_conc</label><select id="dose"></select></div><div><label for="nutrient">nutrient_conc</label><select id="nutrient"></select></div></div>
+<div class="metrics">
+<div class="card"><label>จำนวนแถว</label><strong id="filteredCount">—</strong></div><div class="card"><label>ค่าเฉลี่ย</label><strong id="filteredMean">—</strong></div><div class="card"><label>ค่าต่ำสุด</label><strong id="filteredMin">—</strong></div><div class="card"><label>ค่าสูงสุด</label><strong id="filteredMax">—</strong></div>
+</div>
+<div class="two"><div class="panel"><h2>แนวโน้มตามเวลา</h2><p class="muted">ค่าเฉลี่ย surv_frac สำหรับเงื่อนไขที่เลือก</p><div id="timelineChart" class="chart"></div></div><div class="panel"><h2>ตัวอย่างข้อมูล</h2><div class="tablewrap"><table><thead><tr><th>population</th><th>time</th><th>surv_frac</th></tr></thead><tbody id="filteredRows"></tbody></table></div></div></div></div>
+</section>
+<section class="page" id="simulation">
+<div class="simulation-intro panel"><div><span class="eyebrow">INTERACTIVE MODEL</span><h2>ทดลองวิวัฒนาการของประชากรเชื้อ</h2><p class="muted">ปรับเงื่อนไข กด Run Simulation แล้วเปรียบเทียบแนวโน้มของเชื้อไวต่อยาและเชื้อดื้อยา</p></div><div class="model-tag">โมเดลเชิงการศึกษา</div></div>
+<div class="simulation-layout">
+<div class="panel">
+<h2>พารามิเตอร์</h2>
+<div class="slider-control"><div class="slider-heading"><label for="simAntibiotic">Antibiotic concentration</label><output id="simAntibioticValue">0.50</output></div><input id="simAntibiotic" type="range" min="0" max="1" step="0.05" value="0.50"><div class="range-labels"><span>ต่ำ (0)</span><span>สูง (1)</span></div><p class="muted">ในโมเดลนี้ ยามีผลกดเชื้อไวต่อยามากกว่าเชื้อดื้อยา</p></div>
+<div class="slider-control"><div class="slider-heading"><label for="simNutrient">Nutrient concentration</label><output id="simNutrientValue">0.70</output></div><input id="simNutrient" type="range" min="0" max="1" step="0.05" value="0.70"><div class="range-labels"><span>ต่ำ (0)</span><span>สูง (1)</span></div><p class="muted">สารอาหารมีผลต่อการเติบโตของทั้งสองกลุ่ม</p></div>
+<div class="slider-control"><div class="slider-heading"><label for="simInitialResistant">สัดส่วนเชื้อดื้อยาเริ่มต้น</label><output id="simInitialResistantValue">2.0%</output></div><input id="simInitialResistant" type="range" min="0.001" max="0.5" step="0.001" value="0.02"><div class="range-labels"><span>0.1%</span><span>50%</span></div></div>
+<div class="slider-control"><div class="slider-heading"><label for="simSteps">ระยะเวลาจำลอง</label><output id="simStepsValue">50 steps</output></div><input id="simSteps" type="range" min="10" max="100" step="10" value="50"><div class="range-labels"><span>10 steps</span><span>100 steps</span></div></div>
+<div class="button-row"><button id="runSimulation" class="primary">▶ Run Simulation</button><button id="resetSimulation" class="secondary">Reset</button></div>
+<p id="simulationMessage" class="muted" aria-live="polite">ปรับค่าตามต้องการ แล้วกด Run Simulation</p>
+</div>
+<div class="panel results-panel"><div class="panel-title-row"><div><h2>ผลการจำลอง</h2><p class="muted">ประชากรสัมพัทธ์ในแต่ละช่วงเวลา</p></div><span id="saveStatus" class="save-status">ยังไม่ได้จำลอง</span></div>
+<div class="legend"><span><i class="dot susceptible"></i>เชื้อไวต่อยา</span><span><i class="dot resistant"></i>เชื้อดื้อยา</span></div>
+<div id="simulationChart" class="chart simulation-chart"><div class="empty-state">กราฟจะแสดงหลังจากกด Run Simulation</div></div>
+<div class="metrics sim-metrics">
+<div class="card"><label>สัดส่วนเชื้อดื้อยาสุดท้าย</label><strong id="finalResistant">—</strong><small>ของประชากรทั้งหมด</small></div>
+<div class="card"><label>เชื้อไวต่อยา (สุดท้าย)</label><strong id="finalSusceptible">—</strong><small>ประชากรสัมพัทธ์</small></div>
+<div class="card"><label>เชื้อดื้อยา (สุดท้าย)</label><strong id="finalResistantPop">—</strong><small>ประชากรสัมพัทธ์</small></div>
+</div>
+</div>
+</div>
+<div class="two">
+<div class="panel"><h2>กลไกที่รวมในโมเดล</h2><ol><li>การเจริญเติบโตขึ้นกับสารอาหารและพื้นที่รองรับของประชากร</li><li>การคัดเลือกโดยยาปฏิชีวนะ ซึ่งกดเชื้อไวต่อยาแรงกว่าเชื้อดื้อยา</li><li>ต้นทุนการดื้อยา ทำให้การเติบโตของเชื้อดื้อยาลดลง</li><li>การเปลี่ยนสถานะจากเชื้อไวต่อยาเป็นเชื้อดื้อยาในอัตราต่ำคงที่</li></ol></div>
+<div class="panel"><h2>ประวัติการจำลองล่าสุด</h2><p class="muted">เก็บใน PostgreSQL ตาราง <code>amr_simulation_runs</code> หากบันทึกสำเร็จ</p><div class="tablewrap"><table><thead><tr><th>เวลา</th><th>ยา</th><th>สารอาหาร</th><th>สัดส่วนดื้อยาสุดท้าย</th></tr></thead><tbody id="simulationRuns"><tr><td colspan="4">ยังไม่มีข้อมูล</td></tr></tbody></table></div></div>
+</div>
+<div class="panel"><h2>สมมติฐานและข้อจำกัด</h2><p>ค่าพารามิเตอร์บนหน้าจอเป็นสเกลจำลอง 0–1 ไม่ได้แปลงเป็นหน่วยยาเฉพาะชนิด แบบจำลองนี้ใช้ค่าคงที่อย่างง่ายเพื่อสาธิตกลไกเท่านั้น ยังไม่ได้ fit หรือ validate กับข้อมูลเชิงทดลอง ดังนั้นควรใช้เพื่อเรียนรู้ความสัมพันธ์ภายในโมเดล ไม่ใช้คาดการณ์การรักษาหรือสถานการณ์จริง</p></div>
+</section>
+<section class="page" id="data">
+<div class="panel"><h2>ข้อมูลจากฐานข้อมูล</h2><p class="muted">แสดงตัวอย่าง 50 แถวแรกที่อ่านจาก PostgreSQL</p><div class="tablewrap"><table><thead><tr><th>AB_conc</th><th>nutrient_conc</th><th>population</th><th>time</th><th>surv_frac</th></tr></thead><tbody id="allRows"></tbody></table></div></div>
+<div class="two sql"><div class="panel"><h2>SQL: เปรียบเทียบ 2 พารามิเตอร์</h2><pre>SELECT ab_conc, nutrient_conc,
+       COUNT(*) AS sample_count,
+       AVG(surv_frac) AS mean_surv_frac
+FROM amr_evol_dynamics
+GROUP BY ab_conc, nutrient_conc
+ORDER BY ab_conc, nutrient_conc;</pre></div><div class="panel"><h2>SQL: แนวโน้มตามเวลา</h2><pre>SELECT ab_conc, nutrient_conc, time,
+       AVG(surv_frac) AS mean_surv_frac
+FROM amr_evol_dynamics
+GROUP BY ab_conc, nutrient_conc, time
+ORDER BY ab_conc, nutrient_conc, time;</pre></div></div>
+<div class="panel sql"><h2>SQL: ประวัติการจำลอง</h2><pre>SELECT id, created_at, antibiotic, nutrient, steps,
+       final_resistant_fraction
+FROM amr_simulation_runs
+ORDER BY created_at DESC
+LIMIT 10;</pre><p class="muted">ตารางประวัติจะถูกสร้างโดยอัตโนมัติเมื่อส่งการจำลองครั้งแรกและบันทึกสำเร็จ</p></div>
+</section>
+<div id="error" class="error" hidden></div>
+</main><footer>AMR-EcoSim · Flask + PostgreSQL · Educational prototype</footer>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body></html>

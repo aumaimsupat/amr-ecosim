@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMR-EcoSim | PostgreSQL Dashboard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header><div class="brand"><div class="logo">AMR</div><div><h1>AMR-EcoSim</h1><p>Antibiotic & nutrient data explorer</p></div></div><span id="dbStatus" class="status">กำลังตรวจฐานข้อมูล…</span></header>
+<main>
+<div class="notice"><b>ขอบเขตการแปลผล:</b> เว็บนี้วิเคราะห์ค่าที่บันทึกใน CSV ผ่าน PostgreSQL ไม่ใช่แบบจำลองวิวัฒนาการที่ผ่านการตรวจสอบทางชีววิทยา ต้องตรวจนิยาม <code>surv_frac</code> จากบทความต้นฉบับก่อนเรียกว่าอัตราการรอดหรือการดื้อยา</div>
+<nav class="tabs"><button class="tab active" data-page="overview">ภาพรวม</button><button class="tab" data-page="explore">ทดลองเปรียบเทียบ</button><button class="tab" data-page="data">ข้อมูลและ SQL</button></nav>
+<section class="page active" id="overview">
+<div class="metrics">
+<div class="card"><label>จำนวนแถว</label><strong id="rowCount">—</strong><small>ข้อมูลใน PostgreSQL</small></div>
+<div class="card"><label>ค่าเฉลี่ย surv_frac</label><strong id="overallMean">—</strong><small>ทุกเงื่อนไขรวมกัน</small></div>
+<div class="card"><label>จำนวนระดับยา</label><strong id="doseLevels">—</strong><small>ค่า AB_conc ที่ไม่ซ้ำ</small></div>
+<div class="card"><label>ช่วงเวลา</label><strong id="timeRange">—</strong><small>ค่าต่ำสุด–สูงสุด</small></div>
+</div>
+<div class="two"><div class="panel"><h2>ค่าเฉลี่ย surv_frac ตามระดับยา</h2><p class="muted">รวมทุกระดับสารอาหารและเวลา โปรดตีความเป็นภาพรวมเท่านั้น</p><div id="doseChart" class="chart"></div></div><div class="panel"><h2>วิธีอ่าน Dashboard</h2><p>เลือกเงื่อนไขยาและสารอาหารในแท็บ “ทดลองเปรียบเทียบ” เพื่อดูจำนวนแถว ค่าเฉลี่ย ค่าต่ำสุด–สูงสุด และแนวโน้มตามเวลา</p><ul><li><code>AB_conc</code> — ความเข้มข้นยาตามไฟล์</li><li><code>nutrient_conc</code> — ความเข้มข้นสารอาหาร</li><li><code>surv_frac</code> — ตัวแปรผลลัพธ์ที่ต้องตรวจนิยาม</li><li><code>time</code>, <code>population</code> — เวลาและกลุ่มประชากร</li></ul></div></div>
+</section>
+<section class="page" id="explore">
+<div class="panel"><h2>เลือกเงื่อนไข</h2><p class="muted">รายการตัวเลือกโหลดจาก PostgreSQL ผ่าน API</p><div class="controls"><div><label for="dose">AB_conc</label><select id="dose"></select></div><div><label for="nutrient">nutrient_conc</label><select id="nutrient"></select></div></div>
+<div class="metrics">
+<div class="card"><label>จำนวนแถว</label><strong id="filteredCount">—</strong></div><div class="card"><label>ค่าเฉลี่ย</label><strong id="filteredMean">—</strong></div><div class="card"><label>ค่าต่ำสุด</label><strong id="filteredMin">—</strong></div><div class="card"><label>ค่าสูงสุด</label><strong id="filteredMax">—</strong></div>
+</div>
+<div class="two"><div class="panel"><h2>แนวโน้มตามเวลา</h2><p class="muted">ค่าเฉลี่ยตาม time สำหรับเงื่อนไขที่เลือก</p><div id="timelineChart" class="chart"></div></div><div class="panel"><h2>ตัวอย่างข้อมูล</h2><div class="tablewrap"><table><thead><tr><th>population</th><th>time</th><th>surv_frac</th></tr></thead><tbody id="filteredRows"></tbody></table></div></div></div></div>
+</section>
+<section class="page" id="data">
+<div class="panel"><h2>ข้อมูลจากฐานข้อมูล</h2><p class="muted">แสดงตัวอย่าง 50 แถวแรกที่อ่านจาก PostgreSQL</p><div class="tablewrap"><table><thead><tr><th>AB_conc</th><th>nutrient_conc</th><th>population</th><th>time</th><th>surv_frac</th></tr></thead><tbody id="allRows"></tbody></table></div></div>
+<div class="two sql"><div class="panel"><h2>SQL: เปรียบเทียบ 2 พารามิเตอร์</h2><pre>SELECT ab_conc, nutrient_conc,
+       COUNT(*) AS sample_count,
+       AVG(surv_frac) AS mean_surv_frac
+FROM amr_evol_dynamics
+GROUP BY ab_conc, nutrient_conc
+ORDER BY ab_conc, nutrient_conc;</pre></div><div class="panel"><h2>SQL: แนวโน้มตามเวลา</h2><pre>SELECT ab_conc, nutrient_conc, time,
+       AVG(surv_frac) AS mean_surv_frac
+FROM amr_evol_dynamics
+GROUP BY ab_conc, nutrient_conc, time
+ORDER BY ab_conc, nutrient_conc, time;</pre></div></div>
+</section>
+<div id="error" class="error" hidden></div>
+</main><footer>AMR-EcoSim · Flask + PostgreSQL · Educational prototype</footer>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body></html>
